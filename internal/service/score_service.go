@@ -24,7 +24,7 @@ func (svc *ScoreService) AddScore(ctx context.Context, userID string, delta int6
 }
 
 func (svc *ScoreService) DeductScore(ctx context.Context, userID string, amount int64) (int64, error) {
-	return svc.store.AddScore(userID, amount)
+	return svc.store.AddScore(userID, -amount)
 }
 
 func (svc *ScoreService) GetScore(ctx context.Context, userID string) (int64, error) {

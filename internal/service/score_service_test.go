@@ -33,6 +33,36 @@ func TestServiceAddAndGetScore(t *testing.T) {
 	}
 }
 
+func TestServiceDeductScore(t *testing.T) {
+	svc := NewScoreService(store.NewMemoryStore())
+	svc.Register(context.Background(), "u1", "alice")
+	svc.AddScore(context.Background(), "u1", 100)
+
+	// Deducting 50 must decrease the score, not increase it.
+	score, err := svc.DeductScore(context.Background(), "u1", 50)
+	if err != nil {
+		t.Fatalf("deduct score failed: %v", err)
+	}
+	if score != 50 {
+		t.Fatalf("expected score 50 after deduction, got %d", score)
+	}
+
+	got, err := svc.GetScore(context.Background(), "u1")
+	if err != nil {
+		t.Fatalf("get score failed: %v", err)
+	}
+	if got != 50 {
+		t.Fatalf("expected persisted score 50, got %d", got)
+	}
+}
+
+func TestServiceDeductScoreNotFound(t *testing.T) {
+	svc := NewScoreService(store.NewMemoryStore())
+	if _, err := svc.DeductScore(context.Background(), "missing", 50); err != store.ErrUserNotFound {
+		t.Fatalf("expected ErrUserNotFound, got %v", err)
+	}
+}
+
 func TestServiceGetUser(t *testing.T) {
 	svc := NewScoreService(store.NewMemoryStore())
 	svc.Register(context.Background(), "u1", "alice")
