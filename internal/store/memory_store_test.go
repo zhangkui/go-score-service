@@ -44,6 +44,31 @@ func TestGetScore(t *testing.T) {
 	}
 }
 
+func TestGetUserReturnsIndependentCopy(t *testing.T) {
+	s := NewMemoryStore()
+	if err := s.Register("u1", "alice"); err != nil {
+		t.Fatalf("register failed: %v", err)
+	}
+	if _, err := s.AddScore("u1", 50); err != nil {
+		t.Fatalf("add score failed: %v", err)
+	}
+
+	user, err := s.GetUser("u1")
+	if err != nil {
+		t.Fatalf("get user failed: %v", err)
+	}
+	user.Name = "modified"
+	user.Score = 999
+
+	storedUser, err := s.GetUser("u1")
+	if err != nil {
+		t.Fatalf("get user after mutation failed: %v", err)
+	}
+	if storedUser.Name != "alice" || storedUser.Score != 50 {
+		t.Fatalf("stored user was mutated through returned copy: %+v", storedUser)
+	}
+}
+
 func TestLeaderboard(t *testing.T) {
 	s := NewMemoryStore()
 	s.Register("u1", "alice")

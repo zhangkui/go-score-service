@@ -53,7 +53,8 @@ func (s *MemoryStore) GetUser(userID string) (*model.User, error) {
 	if !exists {
 		return nil, ErrUserNotFound
 	}
-	return user, nil
+	userCopy := *user
+	return &userCopy, nil
 }
 
 func (s *MemoryStore) Leaderboard(limit int) []model.ScoreEntry {
