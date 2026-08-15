@@ -1,6 +1,7 @@
 package store
 
 import (
+	"sort"
 	"sync"
 
 	"go-score-service/internal/model"
@@ -57,21 +58,23 @@ func (s *MemoryStore) GetUser(userID string) (*model.User, error) {
 }
 
 func (s *MemoryStore) Leaderboard(limit int) []model.ScoreEntry {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	entries := make([]model.ScoreEntry, 0, len(s.users))
 	for _, u := range s.users {
 		entries = append(entries, model.ScoreEntry{UserID: u.ID, Score: u.Score})
 	}
-	sortDesc(entries)
+	// Sort by score descending. Break ties by UserID ascending so that users
+	// with equal scores always appear in a stable, deterministic order,
+	// regardless of Go's randomized map iteration order.
+	sort.SliceStable(entries, func(i, j int) bool {
+		if entries[i].Score != entries[j].Score {
+			return entries[i].Score > entries[j].Score
+		}
+		return entries[i].UserID < entries[j].UserID
+	})
 	if limit > 0 && limit < len(entries) {
 		entries = entries[:limit]
 	}
 	return entries
-}
-
-func sortDesc(entries []model.ScoreEntry) {
-	for i := 1; i < len(entries); i++ {
-		for j := i; j > 0 && entries[j].Score >= entries[j-1].Score; j-- {
-			entries[j], entries[j-1] = entries[j-1], entries[j]
-		}
-	}
 }

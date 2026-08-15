@@ -3,6 +3,8 @@ package store
 import (
 	"sync"
 	"testing"
+
+	"go-score-service/internal/model"
 )
 
 func TestRegister(t *testing.T) {
@@ -77,4 +79,48 @@ func TestConcurrentAddScore(t *testing.T) {
 	if score != 100 {
 		t.Fatalf("expected 100, got %d", score)
 	}
+}
+
+func TestLeaderboardTieOrderStable(t *testing.T) {
+	s := NewMemoryStore()
+	// Register out of lexicographic order so the result cannot depend on
+	// registration order or Go's randomized map iteration order.
+	s.Register("u3", "carol")
+	s.Register("u1", "alice")
+	s.Register("u2", "bob")
+	// Identical scores → all three users are tied.
+	s.AddScore("u1", 100)
+	s.AddScore("u2", 100)
+	s.AddScore("u3", 100)
+
+	first := s.Leaderboard(0)
+	if len(first) != 3 {
+		t.Fatalf("expected 3 entries, got %d", len(first))
+	}
+	// Tied users must be ordered deterministically by UserID ascending.
+	want := []string{"u1", "u2", "u3"}
+	for i, e := range first {
+		if e.UserID != want[i] {
+			t.Fatalf("entry %d: expected %s, got %s", i, want[i], e.UserID)
+		}
+	}
+	// Repeated queries must return the exact same ordering every time.
+	for n := 0; n < 100; n++ {
+		got := s.Leaderboard(0)
+		if !equalScoreEntries(first, got) {
+			t.Fatalf("leaderboard order changed on repeat %d:\n first=%v\n got  =%v", n, first, got)
+		}
+	}
+}
+
+func equalScoreEntries(a, b []model.ScoreEntry) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
 }
