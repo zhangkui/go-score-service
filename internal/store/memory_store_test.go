@@ -61,6 +61,29 @@ func TestLeaderboard(t *testing.T) {
 	}
 }
 
+func TestLeaderboardOrdersTiedScoresByUserID(t *testing.T) {
+	s := NewMemoryStore()
+	for _, userID := range []string{"u3", "u1", "u2", "u4"} {
+		if err := s.Register(userID, userID); err != nil {
+			t.Fatalf("register %s failed: %v", userID, err)
+		}
+	}
+	for _, userID := range []string{"u1", "u2", "u3"} {
+		if _, err := s.AddScore(userID, 100); err != nil {
+			t.Fatalf("add score for %s failed: %v", userID, err)
+		}
+	}
+
+	want := []string{"u1", "u2", "u3"}
+	for attempt := 0; attempt < 100; attempt++ {
+		board := s.Leaderboard(3)
+		for index, userID := range want {
+			if board[index].UserID != userID {
+				t.Fatalf("attempt %d: entry %d: expected %s, got %s", attempt, index, userID, board[index].UserID)
+			}
+		}
+	}
+}
 func TestConcurrentAddScore(t *testing.T) {
 	s := NewMemoryStore()
 	s.Register("u1", "alice")
