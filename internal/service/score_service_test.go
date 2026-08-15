@@ -33,6 +33,24 @@ func TestServiceAddAndGetScore(t *testing.T) {
 	}
 }
 
+func TestServiceDeductScore(t *testing.T) {
+	svc := NewScoreService(store.NewMemoryStore())
+	if err := svc.Register(context.Background(), "u1", "alice"); err != nil {
+		t.Fatalf("register failed: %v", err)
+	}
+	if _, err := svc.AddScore(context.Background(), "u1", 100); err != nil {
+		t.Fatalf("add score failed: %v", err)
+	}
+
+	score, err := svc.DeductScore(context.Background(), "u1", 50)
+	if err != nil {
+		t.Fatalf("deduct score failed: %v", err)
+	}
+	if score != 50 {
+		t.Fatalf("expected 50 after deduction, got %d", score)
+	}
+}
+
 func TestServiceGetUser(t *testing.T) {
 	svc := NewScoreService(store.NewMemoryStore())
 	svc.Register(context.Background(), "u1", "alice")
