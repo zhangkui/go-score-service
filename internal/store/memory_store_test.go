@@ -61,6 +61,46 @@ func TestLeaderboard(t *testing.T) {
 	}
 }
 
+func TestGetUserReturnsIndependentCopy(t *testing.T) {
+	s := NewMemoryStore()
+	s.Register("u1", "alice")
+	s.AddScore("u1", 50)
+
+	user, err := s.GetUser("u1")
+	if err != nil {
+		t.Fatalf("get user failed: %v", err)
+	}
+	if user.Name != "alice" || user.Score != 50 {
+		t.Fatalf("unexpected user: %+v", user)
+	}
+
+	// Mutate the returned user; the store's data must not change.
+	user.Name = "mallory"
+	user.Score = 9999
+	user.ID = "evil"
+
+	stored, err := s.GetUser("u1")
+	if err != nil {
+		t.Fatalf("second get user failed: %v", err)
+	}
+	if stored.ID != "u1" {
+		t.Fatalf("stored ID changed: got %q, want %q", stored.ID, "u1")
+	}
+	if stored.Name != "alice" {
+		t.Fatalf("stored Name changed: got %q, want %q", stored.Name, "alice")
+	}
+	if stored.Score != 50 {
+		t.Fatalf("stored Score changed: got %d, want %d", stored.Score, 50)
+	}
+
+	// A second mutation of the first returned copy must also be isolated.
+	user.Score = -1
+	stored2, _ := s.GetUser("u1")
+	if stored2.Score != 50 {
+		t.Fatalf("stored Score changed on second mutation: got %d, want %d", stored2.Score, 50)
+	}
+}
+
 func TestConcurrentAddScore(t *testing.T) {
 	s := NewMemoryStore()
 	s.Register("u1", "alice")

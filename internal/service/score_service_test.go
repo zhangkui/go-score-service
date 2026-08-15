@@ -46,6 +46,32 @@ func TestServiceGetUser(t *testing.T) {
 	}
 }
 
+func TestServiceGetUserReturnsIndependentCopy(t *testing.T) {
+	svc := NewScoreService(store.NewMemoryStore())
+	svc.Register(context.Background(), "u1", "alice")
+	svc.AddScore(context.Background(), "u1", 50)
+
+	user, err := svc.GetUser(context.Background(), "u1")
+	if err != nil {
+		t.Fatalf("get user failed: %v", err)
+	}
+
+	// Mutate the returned user; the store's data must not change.
+	user.Name = "mallory"
+	user.Score = 9999
+
+	stored, err := svc.GetUser(context.Background(), "u1")
+	if err != nil {
+		t.Fatalf("second get user failed: %v", err)
+	}
+	if stored.Name != "alice" {
+		t.Fatalf("stored Name changed: got %q, want %q", stored.Name, "alice")
+	}
+	if stored.Score != 50 {
+		t.Fatalf("stored Score changed: got %d, want %d", stored.Score, 50)
+	}
+}
+
 func TestServiceLeaderboard(t *testing.T) {
 	svc := NewScoreService(store.NewMemoryStore())
 	svc.Register(context.Background(), "u1", "alice")
